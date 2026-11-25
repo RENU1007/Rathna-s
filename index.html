@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#d35400" />
+  <title>Rathna's Cakes & Bakes</title>
+  <style>
+    :root{--orange:#d35400;--green:#198754;--red:#dc3545;--bg:#f4f7f6;--card:#fff;--text:#222;--muted:#667085}
+    *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--text)}
+    .container{max-width:760px;margin:auto;padding:14px}.header{text-align:center}.header h1{color:var(--orange);margin-bottom:4px}.muted{color:var(--muted);font-size:13px}
+    .card{background:var(--card);padding:16px;margin:14px 0;border-radius:12px;box-shadow:0 2px 8px #00000012}.hidden{display:none!important}
+    input,select,button{font:inherit}input,select{width:100%;padding:11px;border:1px solid #ccc;border-radius:7px;margin:5px 0 10px}
+    button{border:0;border-radius:8px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:var(--orange);color:white}.green{background:var(--green);color:white}.dark{background:#333;color:#fff}.danger{background:var(--red);color:#fff;padding:6px 9px;font-size:12px}.light{background:#eee}.full{width:100%}
+    .nav{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:3}.nav button{padding:9px 3px;font-size:12px}.nav .active{background:var(--orange);color:#fff}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #eee}.row:last-child{border:0}.qty{width:80px}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#fff3e8;padding:12px;border-radius:9px}.metric b{font-size:20px}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+    pre{white-space:pre-wrap;background:#f1f1f1;padding:12px;border-radius:8px}.positive{color:var(--green)}.negative{color:var(--red)}
+    @media(max-width:600px){.grid,.grid3,.actions{grid-template-columns:1fr}.nav{grid-template-columns:repeat(3,1fr)}}
+  </style>
+</head>
+<body>
+<div class="container">
+  <header class="header"><h1>Rathna's Cakes & Bakes</h1><div class="muted">Central Billing & Expense Tracker</div></header>
+
+  <section id="loginCard" class="card">
+    <h2>Staff Login</h2><input id="email" type="email" placeholder="Email"/><input id="password" type="password" placeholder="Password"/>
+    <button id="loginBtn" class="primary full">Login</button><p id="loginError" class="negative"></p>
+  </section>
+
+  <div id="app" class="hidden">
+    <div class="row"><span id="userText" class="muted"></span><button id="logoutBtn" class="light">Logout</button></div>
+    <nav class="nav">
+      <button data-tab="billing" class="active">Billing</button><button data-tab="expense">Expense</button><button data-tab="report">Reports</button><button data-tab="products">Products</button><button data-tab="clients">Shops</button>
+    </nav>
+
+    <section id="billing" class="tab card"><h2>Create Bill</h2><select id="billClient"><option value="">Select shop</option></select><div id="productList"></div>
+      <div class="grid3"><div class="metric">Today's bill<br><b id="todayTotal">₹0</b></div><div class="metric">Old pending<br><b id="oldPending">₹0</b></div><div><label>Received today</label><input id="received" type="number" min="0" value="0"/></div></div>
+      <div class="actions"><button id="previewBtn" class="primary">Preview</button><button id="saveBillBtn" class="dark">Save Bill</button><button id="whatsappBtn" class="green">WhatsApp</button></div><pre id="billPreview" class="hidden"></pre>
+    </section>
+
+    <section id="expense" class="tab card hidden"><h2>Add Income / Expense</h2><div class="grid">
+      <input id="txDate" type="date"/><select id="txType"><option>Expense</option><option>Income</option></select>
+      <select id="txCategory"><option>Petrol</option><option>Ingredients</option><option>Packaging</option><option>Vehicle</option><option>Salary</option><option>Rent</option><option>Electricity</option><option>Other</option></select>
+      <input id="txAmount" type="number" min="0" placeholder="Amount ₹"/><input id="txShop" placeholder="Shop / route (optional)"/><input id="txNote" placeholder="Description"/></div><button id="saveTxBtn" class="primary full">Save Entry</button>
+    </section>
+
+    <section id="report" class="tab card hidden"><h2>Monthly Report</h2><input id="reportMonth" type="month"/><div class="grid3"><div class="metric">Income<br><b id="rIncome">₹0</b></div><div class="metric">Expense<br><b id="rExpense">₹0</b></div><div class="metric">Profit<br><b id="rProfit">₹0</b></div></div><p>Petrol: <b id="rPetrol">₹0</b></p><div id="transactionList"></div></section>
+
+    <section id="products" class="tab card hidden"><h2>Products</h2><div class="grid"><input id="productName" placeholder="Product name"/><input id="productPrice" type="number" placeholder="Price ₹"/></div><button id="addProductBtn" class="primary full">Add Product</button><div id="manageProducts"></div></section>
+    <section id="clients" class="tab card hidden"><h2>Shops / Clients</h2><div class="grid"><input id="clientName" placeholder="Shop name"/><input id="clientPhone" type="tel" placeholder="10-digit phone"/></div><button id="addClientBtn" class="primary full">Add Shop</button><div id="manageClients"></div></section>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+
+// STEP 1: Replace every value below using Firebase Console > Project settings > Your apps > Web app.
+const firebaseConfig = {
+  apiKey: 'PASTE_API_KEY',
+  authDomain: 'PASTE_PROJECT_ID.firebaseapp.com',
+  projectId: 'PASTE_PROJECT_ID',
+  storageBucket: 'PASTE_PROJECT_ID.firebasestorage.app',
+  messagingSenderId: 'PASTE_SENDER_ID',
+  appId: 'PASTE_APP_ID'
+};
+const fb=initializeApp(firebaseConfig), auth=getAuth(fb), db=getFirestore(fb);
+const $=id=>document.getElementById(id), money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
+const today=new Date().toISOString().slice(0,10); $('txDate').value=today; $('reportMonth').value=today.slice(0,7);
+let products=[], clients=[], transactions=[], chosenClient=null, previewText='';
+
+$('loginBtn').onclick=async()=>{try{await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value);$('loginError').textContent=''}catch(e){$('loginError').textContent='Login failed. Check email/password.'}};
+$('logoutBtn').onclick=()=>signOut(auth);
+onAuthStateChanged(auth,user=>{ $('loginCard').classList.toggle('hidden',!!user); $('app').classList.toggle('hidden',!user); if(user){$('userText').textContent=user.email; startListeners()} });
+
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.add('hidden'));$(b.dataset.tab).classList.remove('hidden')});
+
+function startListeners(){
+  onSnapshot(query(collection(db,'products'),orderBy('name')),s=>{products=s.docs.map(d=>({id:d.id,...d.data()}));renderProducts()});
+  onSnapshot(query(collection(db,'clients'),orderBy('name')),s=>{clients=s.docs.map(d=>({id:d.id,...d.data()}));renderClients()});
+  onSnapshot(query(collection(db,'transactions'),orderBy('date','desc')),s=>{transactions=s.docs.map(d=>({id:d.id,...d.data()}));renderReport()});
+}
+function renderProducts(){
+  $('productList').innerHTML=products.map(p=>`<div class="row"><div><b>${esc(p.name)}</b><div class="muted">${money(p.price)} / unit</div></div><input class="qty" data-id="${p.id}" type="number" min="0" value="0"></div>`).join('');
+  $('manageProducts').innerHTML=products.map(p=>`<div class="row"><span><b>${esc(p.name)}</b> · ${money(p.price)}</span><button class="danger delProduct" data-id="${p.id}">Delete</button></div>`).join('');
+  document.querySelectorAll('.qty').forEach(x=>x.oninput=calculate); document.querySelectorAll('.delProduct').forEach(x=>x.onclick=()=>deleteDoc(doc(db,'products',x.dataset.id)));
+}
+function renderClients(){
+  $('billClient').innerHTML='<option value="">Select shop</option>'+clients.map(c=>`<option value="${c.id}">${esc(c.name)} · Pending ${money(c.pending)}</option>`).join('');
+  $('manageClients').innerHTML=clients.map(c=>`<div class="row"><span><b>${esc(c.name)}</b><div class="muted">${esc(c.phone)} · Pending ${money(c.pending)}</div></span><button class="danger delClient" data-id="${c.id}">Delete</button></div>`).join('');
+  document.querySelectorAll('.delClient').forEach(x=>x.onclick=()=>deleteDoc(doc(db,'clients',x.dataset.id)));
+}
+$('billClient').onchange=()=>{chosenClient=clients.find(c=>c.id===$('billClient').value)||null;$('oldPending').textContent=money(chosenClient?.pending);calculate()};
+function calculate(){let total=0;document.querySelectorAll('.qty').forEach(i=>{const p=products.find(x=>x.id===i.dataset.id);total+=(Number(i.value)||0)*(p?.price||0)});$('todayTotal').textContent=money(total);return total}
+function buildPreview(){if(!chosenClient)return alert('Select shop');const lines=[];let total=0;document.querySelectorAll('.qty').forEach(i=>{const q=Number(i.value)||0,p=products.find(x=>x.id===i.dataset.id);if(q&&p){const t=q*p.price;total+=t;lines.push(`${p.name}: ${q} x ${money(p.price)} = ${money(t)}`)}});if(!lines.length)return alert('Enter product quantity');const received=Number($('received').value)||0,balance=Math.max(0,total+(chosenClient.pending||0)-received);previewText=["Rathna's Cakes & Bakes",`Date: ${today}`,`Shop: ${chosenClient.name}`,'',...lines,'----------------',`Today: ${money(total)}`,`Old pending: ${money(chosenClient.pending)}`,`Received: ${money(received)}`,`Balance due: ${money(balance)}`,'----------------','Thank you!'].join('\n');$('billPreview').textContent=previewText;$('billPreview').classList.remove('hidden');return {total,received,balance,lines}}
+$('previewBtn').onclick=buildPreview;
+$('saveBillBtn').onclick=async()=>{const v=buildPreview();if(!v)return;const clientRef=doc(db,'clients',chosenClient.id),billRef=doc(collection(db,'bills'));try{await runTransaction(db,async tx=>{const snap=await tx.get(clientRef);if(!snap.exists())throw Error('Shop not found');const latestPending=Number(snap.data().pending)||0,newBalance=Math.max(0,latestPending+v.total-v.received);tx.set(billRef,{clientId:chosenClient.id,shopName:chosenClient.name,date:today,billAmount:v.total,oldPending:latestPending,received:v.received,balance:newBalance,items:v.lines,createdBy:auth.currentUser.uid,createdByEmail:auth.currentUser.email,createdAt:serverTimestamp()});tx.update(clientRef,{pending:newBalance});});await addDoc(collection(db,'transactions'),{date:today,type:'Income',category:'Product Sale',amount:v.total,shop:chosenClient.name,note:`Received ${money(v.received)}`,createdBy:auth.currentUser.uid,createdByEmail:auth.currentUser.email,createdAt:serverTimestamp()});alert('Bill saved centrally');$('received').value=0;document.querySelectorAll('.qty').forEach(i=>i.value=0);$('billPreview').classList.add('hidden')}catch(e){alert('Save failed: '+e.message)}};
+$('whatsappBtn').onclick=()=>{if(!previewText)buildPreview();if(!previewText||!chosenClient)return;let p=(chosenClient.phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;window.open(`https://wa.me/${p}?text=${encodeURIComponent(previewText)}`,'_blank','noopener,noreferrer')};
+
+$('addProductBtn').onclick=async()=>{const name=$('productName').value.trim(),price=Number($('productPrice').value);if(!name||price<=0)return alert('Enter valid product and price');await addDoc(collection(db,'products'),{name,price,createdAt:serverTimestamp()});$('productName').value='';$('productPrice').value=''};
+$('addClientBtn').onclick=async()=>{const name=$('clientName').value.trim(),phone=$('clientPhone').value.replace(/\D/g,'');if(!name||phone.length!==10)return alert('Enter shop and 10-digit phone');await addDoc(collection(db,'clients'),{name,phone,pending:0,createdAt:serverTimestamp()});$('clientName').value='';$('clientPhone').value=''};
+$('saveTxBtn').onclick=async()=>{const amount=Number($('txAmount').value);if(amount<=0)return alert('Enter amount');await addDoc(collection(db,'transactions'),{date:$('txDate').value,type:$('txType').value,category:$('txCategory').value,amount,shop:$('txShop').value.trim(),note:$('txNote').value.trim(),createdBy:auth.currentUser.uid,createdByEmail:auth.currentUser.email,createdAt:serverTimestamp()});$('txAmount').value='';$('txShop').value='';$('txNote').value='';alert('Entry saved')};
+$('reportMonth').onchange=renderReport;
+function renderReport(){const month=$('reportMonth').value,rows=transactions.filter(t=>(t.date||'').startsWith(month));const income=rows.filter(t=>t.type==='Income').reduce((s,t)=>s+Number(t.amount||0),0),expense=rows.filter(t=>t.type==='Expense').reduce((s,t)=>s+Number(t.amount||0),0),petrol=rows.filter(t=>t.type==='Expense'&&t.category==='Petrol').reduce((s,t)=>s+Number(t.amount||0),0);$('rIncome').textContent=money(income);$('rExpense').textContent=money(expense);$('rProfit').textContent=money(income-expense);$('rPetrol').textContent=money(petrol);$('transactionList').innerHTML=rows.map(t=>`<div class="row"><span><b>${esc(t.category)}</b><div class="muted">${t.date} · ${esc(t.shop||'')} · ${esc(t.createdByEmail||'')}</div></span><b class="${t.type==='Income'?'positive':'negative'}">${t.type==='Income'?'+':'-'}${money(t.amount)}</b></div>`).join('')||'<p class="muted">No records for this month.</p>'}
+function esc(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+</script></body></html>
