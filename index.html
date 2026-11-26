@@ -59,12 +59,13 @@ import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, wh
 
 // STEP 1: Replace every value below using Firebase Console > Project settings > Your apps > Web app.
 const firebaseConfig = {
-  apiKey: 'PASTE_API_KEY',
-  authDomain: 'PASTE_PROJECT_ID.firebaseapp.com',
-  projectId: 'PASTE_PROJECT_ID',
-  storageBucket: 'PASTE_PROJECT_ID.firebasestorage.app',
-  messagingSenderId: 'PASTE_SENDER_ID',
-  appId: 'PASTE_APP_ID'
+  apiKey: "AIzaSyBP7kerV7TkCSblF5khTz5Byksc3fCv7Us",
+  authDomain: "rathna-s-bakes.firebaseapp.com",
+  projectId: "rathna-s-bakes",
+  storageBucket: "rathna-s-bakes.firebasestorage.app",
+  messagingSenderId: "1076160462239",
+  appId: "1:1076160462239:web:02801bc631a9fa2a1a51aa",
+  measurementId: "G-1ZW4VHE3SX"
 };
 const fb=initializeApp(firebaseConfig), auth=getAuth(fb), db=getFirestore(fb);
 const $=id=>document.getElementById(id), money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
